@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2026 南極南美 AI 語音導遊</title>
+    <style>
+        /* ================= 基礎設定 ================= */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            background: #fff8f0; 
+            color: #444; 
+            margin: 0; 
+            padding: 0; 
+            padding-bottom: 80px;
+            line-height: 1.6; 
+        }
+
+        /* ================= 頂部導航區 ================= */
+        .header-bg {
+            background: linear-gradient(135deg, #FF9966 0%, #FF5E62 100%);
+            padding: 15px 20px;
+            color: white;
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 4px 15px rgba(255, 94, 98, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 200;
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.3rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            flex-grow: 1;
+        }
+
+        /* AI 相機按鈕 */
+        .btn-camera-top {
+            background: rgba(255, 255, 255, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            backdrop-filter: blur(5px);
+            transition: 0.2s;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .btn-camera-top:active { background: rgba(255, 255, 255, 0.4); transform: scale(0.95); }
+
+        /* 麵包屑與返回按鈕 */
+        .nav-bar {
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+        }
+
+        .btn-back {
+            background: white;
+            color: #FF5E62;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-right: 10px;
+            font-size: 0.8rem;
+            display: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .breadcrumb {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
+        }
+
+        /* ================= 內容容器 ================= */
+        .container { 
+            max-width: 800px; 
+            margin: 20px auto; 
+            padding: 0 20px;
+        }
+
+        /* ================= 控制面板 ================= */
+        .controls { 
+            background: white; 
+            padding: 15px; 
+            border-radius: 15px;
+            border: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        .control-row { 
+            display: flex; 
+            gap: 10px; 
+            justify-content: center; 
+            align-items: center; 
+            margin-bottom: 10px; 
+            flex-wrap: wrap; 
+        }
+
+        select, button, input[type=range] { margin: 0; }
+        
+        select {
+            padding: 6px 10px;
+            border-radius: 15px;
+            border: 1px solid #ddd;
+            max-width: 140px;
+            font-size: 0.9rem;
+        }
+
+        button.ctrl-btn { 
+            padding: 8px 20px; 
+            border: none; 
+            border-radius: 20px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            color: white;
+            font-size: 0.9rem;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.1);
+            min-width: 80px;
+        }
+        .btn-play { background: linear-gradient(to right, #3498db, #2980b9); }
+        .btn-stop { background: linear-gradient(to right, #e74c3c, #c0392b); }
+
+        /* ================= 卡片列表 ================= */
+        .card-list { display: grid; gap: 15px; }
+
+        .nav-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.03);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid #f0f0f0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-card:hover, .nav-card:active {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 94, 98, 0.15);
+            border-color: #FF9966;
+        }
+
+        .nav-card-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-card-subtitle { font-size: 0.9rem; color: #888; }
+        .nav-card-arrow { color: #FF9966; font-size: 1.2rem; }
+
+        /* ================= 景點細節 ================= */
+        .spot-detail-section {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 5px solid #FFD700;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .section-title { font-weight: bold; color: #e67e22; font-size: 1.1rem; }
+
+        .section-text {
+            color: #555;
+            font-size: 1rem;
+            line-height: 1.7;
+            background: #fafafa;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .btn-speak-small {
+            background: #FFD700;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #444;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 0 #d4b106;
+        }
+        .btn-speak-small:active { transform: translateY(2px); box-shadow: none; }
+
+        #status { text-align: center; font-size: 0.85rem; color: #888; margin-top: 5px; font-weight: 500; }
+        .fade-in { animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ================= 相機與 API ================= */
+        #camera-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: black;
+            z-index: 1000;
+            flex-direction: column;
+        }
+        #camera-video { width: 100%; height: 100%; object-fit: cover; }
+        
+        .camera-ui {
+            position: absolute; bottom: 40px; left: 0; width: 100%;
+            display: flex; justify-content: center; align-items: center; gap: 30px;
+            pointer-events: none;
+        }
+        .camera-ui button {
+            pointer-events: auto;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            cursor: pointer;
+        }
+        #btn-capture {
+            width: 70px; height: 70px;
+            background: white; border: 4px solid #ddd;
+            font-size: 2rem;
+        }
+        #btn-capture:active { background: #ccc; }
+        #btn-close-cam {
+            width: 50px; height: 50px;
+            background: rgba(0,0,0,0.6); border: 2px solid white; color: white;
+            font-size: 1.2rem;
+        }
+
+        #ai-loading {
+            display: none;
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.85);
+            color: white; padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 1001;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .loading-spinner { font-size: 2.5rem; animation: spin 2s infinite linear; display: block; margin-bottom: 10px; }
+        @keyframes spin { 0% {transform: rotate(0deg);} 100% {transform: rotate(360deg);} }
+
+    </style>
+</head>
+<body>
+
+<div class="header-bg">
+    <div class="header-top">
+        <h1>✈️ 2026 南極南美</h1>
+        <button class="btn-camera-top" onclick="openCamera()">
+            📷 AI 辨識
+        </button>
+    </div>
+    <div class="nav-bar">
+        <button id="btn-back" class="btn-back" onclick="goBack()">← 返回</button>
+        <span id="breadcrumb" class="breadcrumb">首頁</span>
+    </div>
+</div>
+
+<div class="container">
+    
+    <div class="controls">
+        <div class="control-row">
+            <span style="font-size:0.9rem; font-weight:bold; color:#666;">語速</span>
+            <input type="range" id="speed" min="0.5" max="2.0" step="0.1" value="1.0" style="width:80px;">
+            <span id="speed-val" style="font-size:0.9rem; color:#e67e22; width:35px;">1.0x</span>
+            
+            <select id="voice-select">
+                <option value="">載入中...</option>
+            </select>
+        </div>
+
+        <div class="control-row">
+            <button class="ctrl-btn btn-play" onclick="resumeSpeaking()">▶ 繼續</button>
+            <button class="ctrl-btn btn-stop" onclick="stopSpeaking()">■ 停止</button>
+        </div>
+        <div id="status">準備就緒</div>
+    </div>
+
+    <div id="app-view" class="fade-in"></div>
+
+</div>
+
+<div id="camera-overlay">
+    <video id="camera-video" autoplay playsinline></video>
+    
+    <div id="ai-loading">
+        <span class="loading-spinner">🔮</span>
+        <div>AI 正在觀察景色...<br>Gemini 思考中</div>
+    </div>
+
+    <div class="camera-ui">
+        <button id="btn-close-cam" onclick="closeCamera()">✖</button>
+        <button id="btn-capture" onclick="captureAndAnalyze()">📸</button>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // 0. 全域設定 (API Key & Model)
+    // ==========================================
+    
+    // 您的 API Key (已設定 Git 網域限制，直接寫入安全)
+    const API_KEY = "AIzaSyBQ2zcDJtjakFjUgoUU2uE6xF7jW9Mo4sE";
+    
+    // 使用的模型名稱
+    const MODEL_NAME = "gemini-2.5-flash-lite";
+
+    // ==========================================
+    // 1. 導覽資料 (完整版)
+    // ==========================================
+    const tourData = [
+        {
+            date: "2026/2/2 (一)", location: "出發 & 利馬轉機",
+            mainSpots: [{ name: "行程總覽", desc: "飛行與轉機行程", sections: [{ title: "第一天總覽", text: "今天是旅程的第一天。我們將搭乘長榮航空前往洛杉磯，再轉機前往利馬，最後抵達布宜諾斯艾利斯。這是一趟漫長的飛行，請準備好放鬆心情。" }] }]
+        },
+        {
+            date: "2026/2/3 (二)", location: "抵達布宜諾斯艾利斯",
+            mainSpots: [{ name: "初抵 BA", desc: "入住 Palermo 區", sections: [{ title: "抵達與提醒", text: "歡迎來到南美巴黎！我們將在傍晚抵達，入住 Palermo區。記得要在機場或市區尋找換匯所，體驗阿根廷獨特的藍色美元匯率文化。" }] }]
+        },
+        {
+            date: "2026/2/4 (三)", location: "布宜諾斯艾利斯",
+            mainSpots: [
+                {
+                    name: "MALBA 博物館", desc: "12位大師巡禮",
+                    sections: [
+                        { title: "早安 BA！抵達藝術殿堂", text: "早安。今天我們將展開一場靈魂的對話。我們來到了 MALBA，這裡是拉丁美洲現代藝術的最高殿堂。這座建築由幾何形狀交錯而成，光線是這裡的主角。在進入展廳前，請先感受大廳挑高玻璃帷幕帶來的通透感。" },
+                        { title: "1. 芙烈達·卡蘿", text: "請停留在這幅畫前。這是 Frida Kahlo 的《與猴子一起的自畫像》。畫中的她表情嚴肅而堅毅。那隻擁抱著她的蜘蛛猴，是她無法生育的痛苦中，情感轉移的象徵。黃色的絲帶將她、猴子與鸚鵡緊緊繫在一起，象徵著她與自然、與痛苦密不可分的連結。" },
+                        { title: "2. 塔爾西拉", text: "這幅畫是鎮館之寶《阿巴波魯》。圖皮語意為『吃人的人』。巨大腳掌、微小頭顱的人物，引發了巴西著名的『食人主義運動』——主張吞噬外來文化，轉化為巴西獨特的養分。" },
+                        { title: "3. 安東尼奧·貝爾尼", text: "這是阿根廷國寶畫家 Antonio Berni 的《示威》。畫在布袋粗麻布上，工人的臉孔充滿焦慮。創作於 1934 年經濟大蕭條，發出了阿根廷底層社會最沈重的吶喊。" },
+                        { title: "4. 狄亞哥·里維拉", text: "這幅 1915 年的作品展現了里維拉受立體派影響的一面。畫中人物是西班牙作家 Gómez de la Serna。破碎的幾何色塊解構了畫面，見證了他在回歸墨西哥創造壁畫傳奇前的歐洲時期。" },
+                        { title: "5. 威爾弗雷多·林", text: "這幅《綠色的早晨》帶我們來到古巴。Wifredo Lam 將畢卡索的立體派與非洲原始面具線條融合，畫出了像馬又像人的靈體，充滿了『薩泰里阿教』的巫術氛圍。" },
+                        { title: "6. 舒爾·索拉", text: "Xul Solar 是波赫士的摯友。這幅畫充滿奇怪符號與漂浮建築。他不只是畫家，還發明了『泛語』。他的畫作就像通往烏托邦的地圖，充滿占星術色彩。" },
+                        { title: "7. 艾米利奧·佩托魯蒂", text: "《人民之歌》展示了幾何切分的三位音樂家。光線像玻璃片一樣穿透畫面。當時曾被視為對傳統藝術的挑釁，如今已是經典。" },
+                        { title: "8. 羅伯托·馬塔", text: "這幅《神秘主義的災難》充滿流動熔岩與爆裂星體。Matta 稱此為『心理景觀』，描繪人類潛意識中恐懼與慾望交織的宇宙。" },
+                        { title: "9. 豪爾赫·德拉維加", text: "《拼圖》打破了平面限制。黑白對比強烈的人物在畫布上交纏，反映了 1960 年代社會的混亂，是一首視覺的搖滾樂。" },
+                        { title: "10. 費爾南多·波特羅", text: "這是哥倫比亞大師 Botero 的《鰥夫》。圓潤誇張的造型不僅是可愛，更用體積感來諷刺現實。在悲劇中，這種『胖』是一種對存在的肯定。" },
+                        { title: "11. 赫利奧·奧伊蒂西卡", text: "Hélio Oiticica 的《Parangolés》原本是可以穿在身上的斗篷。他邀請貧民窟舞者穿上跳舞。對他來說，藝術就是生活與行動。" }
+                    ]
+                },
+                { name: "午餐：Cabaña Las Lilas", desc: "港區頂級牛排", sections: [{ title: "頂級牛排", text: "我們前往 Puerto Madero 港區。Cabaña Las Lilas 是阿根廷牛排代名詞。建議嘗試『Ojo de Bife (肋眼)』搭配 Chimichurri 青醬，享受優雅河岸風情。" }] },
+                {
+                    name: "市區觀光", desc: "五月廣場與玫瑰宮",
+                    sections: [
+                        { title: "五月廣場與母親", text: "五月廣場地上的白色頭巾符號，象徵『五月廣場母親』。在獨裁時期，母親們戴著頭巾在此繞行，尋找被失蹤的孩子。這裡是充滿淚水與勇氣的地方。" },
+                        { title: "玫瑰宮的陽台", text: "粉紅色的總統府『玫瑰宮』。傳說是為了調和紅色的聯邦派與白色的集權派。那著名的陽台，就是貝隆夫人 Evita 發表最後演說的地方。" },
+                        { title: "主教座堂", text: "像希臘神廟的建築是主教座堂。裡面安息著南美國父聖馬丁將軍。這裡也是教宗方濟各當選前擔任總主教的地方。" },
+                        { title: "卡比爾多", text: "白色的舊市政廳『卡比爾多』是殖民時代的活化石，見證了 1810 年五月革命的爆發。" },
+                        { title: "七月九日大道", text: "這條世界上最寬的馬路有 140 公尺寬。中央矗立著 67 公尺高的方尖碑，是阿根廷的時代廣場。" }
+                    ]
+                },
+                {
+                    name: "巴羅洛宮", desc: "神曲建築",
+                    sections: [
+                        { title: "緣起", text: "建於 1923 年，建築師 Palanti 為了保存義大利靈魂，依照但丁《神曲》設計了這座大樓，甚至曾計畫安放但丁骨灰。" },
+                        { title: "建築密碼", text: "高 100 公尺對應 100 首詩篇，22 層樓對應詩句格律。分為地獄、煉獄、天堂三部分。" },
+                        { title: "地獄入口", text: "底層是地獄。九個拱門象徵『地獄九圈』。銘言警告：『從這裡進入痛苦之城...』。" },
+                        { title: "地獄大廳", text: "地上的火焰馬賽克，柱子上的龍與怪獸雕像，暗示著罪惡。燈光昏暗，營造壓抑氛圍。" },
+                        { title: "通往煉獄", text: "老式電梯像籠子一樣升起。指針上的『A』代表電梯，也代表 Alpha (開始)。" },
+                        { title: "煉獄 (4-14樓)", text: "每層樓代表罪孽洗滌。裝飾變簡潔，光線變充足，象徵靈魂重獲希望。" },
+                        { title: "天堂階梯", text: "15-22樓是天堂。樓梯變窄，象徵修行之路艱辛。視野突然開闊，空氣變得純淨。" },
+                        { title: "塔頂燈塔", text: "頂端的燈塔曾有 30 萬燭光，象徵神性指引，希望能與對岸烏拉圭的兄弟樓遙遙相望。" },
+                        { title: "南十字星", text: "每年 7 月 9 日晚上，南十字星會剛好出現在燈塔正上方，將建築與宇宙連結。" },
+                        { title: "俯瞰 BA", text: "360 度俯瞰國會大廈與河流。這是從地獄到天堂的旅程，也是 BA 最浪漫的時刻。" }
+                    ]
+                }
+            ]
+        },
+        // === 2/5 烏斯懷亞 ===
+        {
+            date: "2026/2/5 (四)", location: "烏斯懷亞",
+            mainSpots: [
+                { name: "抵達烏斯懷亞", desc: "世界的盡頭", sections: [{ title: "歡迎來到南緯 54 度", text: "歡迎來到烏斯懷亞。呼吸來自南極的純淨空氣。座右銘是『世界的盡頭，一切的開始』。看著被強風吹歪的『旗幟樹』，這裡曾是流放地，現在是探險起點。" }] },
+                { name: "市區漫遊", desc: "戰爭紀念與沉船", sections: [
+                    { title: "馬爾維納斯紀念碑", text: "海邊燃燒著永恆火焰，紀念 1982 年馬爾維納斯戰爭犧牲的士兵。這對阿根廷人是永遠的痛。" },
+                    { title: "聖克里斯多福號", text: "擱淺的救援拖船，參與過二戰，現在是海鳥的家，見證了港口半世紀變遷。" }
+                ]},
+                { name: "監獄博物館", desc: "圓形監獄與歷史", sections: [
+                    { title: "圓形全景", text: "中央大廳採用圓形全景設計，獄警在中間能監控五個翼樓。牆壁石頭是囚犯親手搬來的。" },
+                    { title: "零下的長夜", text: "當年供暖常故障，囚犯穿著『黃藍條紋囚服』在零下溫度度過長夜，顏色是為了防止逃跑。" },
+                    { title: "1 號翼樓", text: "保留未修復的翼樓，充滿霉味與寒氣。這裡曾關押重刑犯，被稱為『活死人墓』。" },
+                    { title: "大耳矮子", text: "傳奇罪犯『大耳矮子』的蠟像。他是專殺小孩的連環殺手，最後據說因虐殺監獄貓被獄友打死。" }
+                ]},
+                { name: "晚餐：帝王蟹", desc: "深海鮮甜", sections: [{ title: "帝王蟹", text: "享用活體南方帝王蟹。用大剪刀剪開，拉出鮮甜蟹肉。建議先吃原味，感受深海甘甜。" }] }
+            ]
+        },
+        // === 2/6 比格爾海峽 ===
+        {
+            date: "2026/2/6 (五)", location: "比格爾海峽",
+            mainSpots: [
+                { name: "海峽巡航", desc: "達爾文足跡", sections: [{ title: "切割山脈的水道", text: "比格爾海峽是被冰川切削出的峽灣。達爾文曾搭小獵犬號經過，驚嘆這裡『荒涼卻充滿野性美』。" }] },
+                { name: "生態巡禮", desc: "鳥島與海獅", sections: [
+                    { title: "皇蘭威鸕鶿", text: "鳥島上黑白色的鳥不是企鵝，是會飛的鸕鶿。眼睛周圍有藍色皮膚。" },
+                    { title: "海獅島", text: "公海獅有像獅子的鬃毛，擁有後宮。牠們吼叫宣示主權，小海獅則練習游泳。" }
+                ]},
+                { name: "世界盡頭燈塔", desc: "紅白燈塔", sections: [{ title: "春光乍洩", text: "Les Eclaireurs 燈塔。電影《春光乍洩》中，張震要把不開心留在這裡。看著它屹立海上，您想許下什麼願望？" }] }
+            ]
+        },
+        // === 2/7 - 2/9 德雷克 ===
+        {
+            date: "2026/2/7 - 2/9", location: "穿越德雷克",
+            mainSpots: [
+                { name: "啟航儀式", desc: "生物安全", sections: [{ title: "真空吸塵", text: "為了保護南極，我們必須在泥屋接受吸塵器檢查，吸掉口袋裡的種子與沙土。這是負責任訪客的儀式。" }] },
+                { name: "德雷克海峽", desc: "西風帶考驗", sections: [{ title: "狂暴海峽", text: "進入無陸地阻擋的西風帶，巨浪是家常便飯。若船劇烈搖晃，請躺在床上感受這股守護南極的天然屏障。" }] },
+                { name: "南極知識", desc: "共有大陸", sections: [{ title: "南極條約", text: "南極沒有國界、軍隊，僅用於和平與科學。我們即將踏上這塊全人類共有的淨土。" }] }
+            ]
+        },
+        // === 2/10 - 2/14 南極登陸 ===
+        {
+            date: "2026/2/10 - 2/14", location: "南極登陸點 (依廣播選擇)",
+            mainSpots: [
+                { name: "欺騙島", desc: "火山口遺跡", sections: [{ title: "火山口幽靈", text: "船駛入沉沒火山口。岸邊有捕鯨站遺跡，生鏽儲油罐與腐朽木船，訴說當年血腥歷史，如今只剩企鵝相伴。" }] },
+                { name: "天堂灣", desc: "冰的聲音", sections: [{ title: "聽見冰聲", text: "這裡水面如鏡。巡遊時請安靜，會聽到『波波波』的聲音，那是萬年冰河氣泡釋放的聲音。" }] },
+                { name: "庫維爾島", desc: "金圖企鵝", sections: [{ title: "企鵝高速公路", text: "雪地上被踩出的深溝是企鵝高速公路。企鵝有絕對路權，請讓路給這些堅持爬坡的小生命。" }] },
+                { name: "尼科港", desc: "冰川崩解", sections: [{ title: "崩解瞬間", text: "位於南極本土。若聽到雷鳴般巨響，是冰川崩解入海，激起巨浪，這是大自然的雕塑過程。" }] },
+                { name: "洛克羅伊港", desc: "企鵝郵局", sections: [{ title: "寄出明信片", text: "這裡是英國博物館兼郵局。寄出一張蓋有南極郵戳的明信片（需三個月），門口常被金圖企鵝堵住。" }] },
+                { name: "半月島", desc: "帽帶企鵝", sections: [{ title: "新月地形", text: "這裡是帽帶企鵝領地。黑色岩石配白色企鵝，背景是雪山。運氣好能看到換毛的象海象。" }] }
+            ]
+        },
+        // === 南極物種 ===
+        {
+            date: "南極物種圖鑑", location: "隨時可聽",
+            mainSpots: [
+                { name: "企鵝家族", desc: "金圖與阿德利", sections: [
+                    { title: "金圖企鵝", text: "嘴巴紅色，頭有白斑。是偷竊大師，常偷鄰居築巢的石頭。" },
+                    { title: "阿德利企鵝", text: "全黑頭白眼圈，像穿燕尾服。好奇大膽，也是敢啄賊鷗的勇士。" }
+                ]},
+                { name: "海豹家族", desc: "豹海豹與威德爾", sections: [
+                    { title: "豹海豹", text: "頭像恐龍，嘴角帶詭異微笑。是頂級掠食者，專吃企鵝。" },
+                    { title: "威德爾海豹", text: "臉像貓，常側躺微笑。會在冰下發出像電子合成器的歌聲。" }
+                ]},
+                { name: "鯨魚", desc: "座頭鯨", sections: [{ title: "氣泡網捕獵", text: "座頭鯨合作吐氣泡圍住磷蝦，同時張嘴衝刺吞食。是南極頂級奇觀。" }] }
+            ]
+        },
+        // === 2/15 重返烏斯懷亞 ===
+        {
+            date: "2026/2/15 (日)", location: "重返烏斯懷亞",
+            mainSpots: [
+                { name: "世界盡頭火車", desc: "囚犯列車", sections: [{ title: "苦難單程票", text: "當年囚犯搭敞篷車進森林砍樹。窗外只剩樹樁的『樹木墳場』是歷史傷痕。" }] },
+                { name: "拉帕塔亞灣", desc: "公路終點", sections: [{ title: "泛美公路終點", text: "3號國道終點牌。路通往阿拉斯加，全長17848公里。背對南極，面對美洲，是旅人的榮耀。" }] },
+                { name: "世界盡頭郵局", desc: "海邊小屋", sections: [{ title: "海上郵局", text: "海邊小木屋郵局。老郵差會幫你在護照蓋章，投入明信片，來自世界盡頭的問候。" }] }
+            ]
+        },
+        // === 2/17 - 2/19 伊瓜蘇 ===
+        {
+            date: "2026/2/17 - 2/19", location: "伊瓜蘇瀑布",
+            mainSpots: [
+                { name: "抵達伊瓜蘇", desc: "大水之歌", sections: [{ title: "亞熱帶雨林", text: "伊瓜蘇意為大水。由275個瀑布組成。小心可愛但會搶食的長鼻浣熊。" }] },
+                { name: "衝瀑布", desc: "Gran Aventura", sections: [{ title: "濕身洗禮", text: "搭快艇衝入聖馬丁瀑布下方。巨大的水壓與轟鳴，是全身濕透的熱情洗禮。" }] },
+                { name: "魔鬼咽喉", desc: "凝視深淵", sections: [
+                    { title: "步道前奏", text: "走過平靜河面棧道，看見蝴蝶飛舞，遠處傳來像雷鳴的大地裂裂聲。" },
+                    { title: "喉嚨口", text: "水霧衝天，說話聽不見。傳說是憤怒的神劈開河床。力量讓人恐懼又著迷。" },
+                    { title: "大黑雨燕", text: "穿梭水瀑的黑色小鳥。牠們衝進瀑布後岩壁築巢，展現頑強生命力。" }
+                ]},
+                { name: "邊界與步道", desc: "三國交界", sections: [
+                    { title: "步道", text: "上層看瀑布如絲綢，下層仰望雄偉。叢林裡可能遇見彩虹巨嘴鳥。" },
+                    { title: "三國交界", text: "阿根廷、巴西、巴拉圭交界。看著河水匯流，夕陽將三國染成金黃。" }
+                ]}
+            ]
+        },
+        // === 2/20 - 2/21 聖地牙哥 ===
+        {
+            date: "2026/2/20 - 2/21", location: "聖地牙哥",
+            mainSpots: [
+                { name: "城市地標", desc: "最高塔與聖母山", sections: [
+                    { title: "南美最高塔", text: "Costanera Center 是南美最高樓。城市被安地斯山環抱，常有薄霧。" },
+                    { title: "聖母山纜車", text: "搭百年纜車上山。聖母像守護城市，俯瞰棋盤式街道與雪山。" }
+                ]},
+                { name: "在地美食", desc: "Mote con Huesillo", sections: [{ title: "國民飲料", text: "桃子乾加糖水煮小麥仁。冰涼香甜，是聖母山頂必喝的飲料兼甜點。" }] }
+            ]
+        },
+        // === 2/22 - 2/25 阿塔卡馬 ===
+        {
+            date: "2026/2/22 (日)", location: "阿塔卡馬沙漠",
+            mainSpots: [
+                { name: "荒原地理", desc: "地球上的火星", sections: [{ title: "最乾燥之地", text: "這裡像火星，有些地方數百年沒下雨。海拔 2400 公尺，請多喝水。" }] },
+                { name: "月亮谷", desc: "鹽與風", sections: [
+                    { title: "圓形劇場", text: "風與水雕刻出的鹽岩壁。大沙丘上是一片寂靜。" },
+                    { title: "三姐妹岩", text: "鹽與黏土的雕塑。傍晚可聽到鹽結晶因熱脹冷縮爆裂的啪啪聲。" }
+                ]},
+                { name: "星空神話", desc: "暗黑星座", sections: [{ title: "黑色羊駝", text: "這裡星空清澈。原住民看的是銀河中的『黑色區域』，例如黑色羊駝，認為那是生命起源。" }] }
+            ]
+        }
+    ];
+
+    // ==========================================
+    // 2. 狀態管理與導航
+    // ==========================================
+    const appView = document.getElementById('app-view');
+    const breadcrumb = document.getElementById('breadcrumb');
+    const btnBack = document.getElementById('btn-back');
+    
+    let state = { view: 'home', dayIndex: null, spotIndex: null };
+
+    function navigate(view, dIdx = null, sIdx = null) {
+        state.view = view;
+        state.dayIndex = dIdx;
+        state.spotIndex = sIdx;
+        render();
+        window.scrollTo(0, 0);
+    }
+
+    function goBack() {
+        if (state.view === 'spot') navigate('day', state.dayIndex);
+        else if (state.view === 'day') navigate('home');
+    }
+
+    function render() {
+        appView.classList.remove('fade-in');
+        void appView.offsetWidth;
+        appView.classList.add('fade-in');
+
+        if (state.view === 'home') renderHome();
+        else if (state.view === 'day') renderDay();
+        else if (state.view === 'spot') renderSpot();
+    }
+
+    function renderHome() {
+        breadcrumb.innerText = "首頁";
+        btnBack.style.display = "none";
+        let html = `<div class="card-list">`;
+        tourData.forEach((day, idx) => {
+            const spotNames = day.mainSpots.map(s => s.name).join("、");
+            html += `
+                <div class="nav-card" onclick="navigate('day', ${idx})">
+                    <div class="nav-card-title">${day.date}<span class="nav-card-arrow">➜</span></div>
+                    <div class="nav-card-subtitle" style="color:#e67e22; font-weight:bold; margin-bottom:5px;">${day.location}</div>
+                    <div class="nav-card-subtitle">包含：${spotNames}</div>
+                </div>`;
+        });
+        appView.innerHTML = html + `</div>`;
+    }
+
+    function renderDay() {
+        const day = tourData[state.dayIndex];
+        breadcrumb.innerText = `首頁 > ${day.date}`;
+        btnBack.style.display = "block";
+        let html = `<div style="margin-bottom:15px; font-weight:bold; color:#2c3e50;">選擇景點：</div><div class="card-list">`;
+        day.mainSpots.forEach((spot, idx) => {
+            html += `
+                <div class="nav-card" onclick="navigate('spot', ${state.dayIndex}, ${idx})">
+                    <div class="nav-card-title">${spot.name}<span class="nav-card-arrow">➜</span></div>
+                    <div class="nav-card-subtitle">${spot.desc}</div>
+                </div>`;
+        });
+        appView.innerHTML = html + `</div>`;
+    }
+
+    function renderSpot() {
+        const day = tourData[state.dayIndex];
+        const spot = day.mainSpots[state.spotIndex];
+        breadcrumb.innerText = `${day.date} > ${spot.name}`;
+        btnBack.style.display = "block";
+        let html = `<h2 style="color:#e67e22; margin-top:0;">${spot.name}</h2>`;
+        spot.sections.forEach((sec, idx) => {
+            html += `
+                <div class="spot-detail-section">
+                    <div class="section-header">
+                        <div class="section-title">${sec.title}</div>
+                        <button class="btn-speak-small" onclick="playSection(${idx})">🔊 朗讀</button>
+                    </div>
+                    <div class="section-text">${sec.text}</div>
+                </div>`;
+        });
+        appView.innerHTML = html;
+    }
+
+    // ==========================================
+    // 3. 語音功能
+    // ==========================================
+    const statusDiv = document.getElementById('status');
+    const speedInput = document.getElementById('speed');
+    const speedVal = document.getElementById('speed-val');
+    const voiceSelect = document.getElementById('voice-select');
+    let synth = window.speechSynthesis;
+    let voices = [];
+
+    function populateVoiceList() {
+        voices = synth.getVoices();
+        voiceSelect.innerHTML = '';
+        if (voices.length === 0) { voiceSelect.innerHTML = '<option>無語音</option>'; return; }
+        
+        voices.sort((a, b) => {
+            if (a.lang.includes('zh') && !b.lang.includes('zh')) return -1;
+            if (!a.lang.includes('zh') && b.lang.includes('zh')) return 1;
+            return 0;
+        });
+
+        voices.forEach((voice) => {
+            const option = document.createElement('option');
+            option.textContent = `${voice.name} (${voice.lang})`;
+            option.value = voice.name;
+            voiceSelect.appendChild(option);
+        });
+    }
+
+    if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = populateVoiceList;
+    setTimeout(populateVoiceList, 500);
+
+    window.playSection = function(sectionIdx) {
+        const spot = tourData[state.dayIndex].mainSpots[state.spotIndex];
+        speak(spot.sections[sectionIdx].text);
+    }
+
+    window.resumeSpeaking = function() {
+        if(synth.paused) { synth.resume(); statusDiv.innerText = "▶ 繼續播放..."; }
+    };
+    window.stopSpeaking = function() {
+        synth.cancel(); statusDiv.innerText = "■ 已停止";
+    };
+
+    function speak(text) {
+        synth.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'zh-TW'; 
+        utterance.rate = parseFloat(speedInput.value);
+        
+        const selectedVoice = voices.find(v => v.name === voiceSelect.value);
+        if (selectedVoice) utterance.voice = selectedVoice;
+
+        utterance.onstart = () => statusDiv.innerText = "🔊 正在導覽...";
+        utterance.onend = () => statusDiv.innerText = "✅ 播放結束";
+        synth.speak(utterance);
+    }
+
+    speedInput.addEventListener('input', (e) => speedVal.innerText = e.target.value + "x");
+
+    // ==========================================
+    // 4. AI 相機與 API (Git 版本)
+    // ==========================================
+    let videoStream = null;
+
+    async function openCamera() {
+        try {
+            // 優先使用後鏡頭
+            videoStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "environment" } 
+            });
+            document.getElementById('camera-video').srcObject = videoStream;
+            document.getElementById('camera-overlay').style.display = 'flex';
+        } catch (err) {
+            alert("相機啟動失敗：\n請確認您已將網頁上傳至 HTTPS 環境 (如 GitHub Pages)。\n錯誤: " + err);
+        }
+    }
+
+    function closeCamera() {
+        if(videoStream) videoStream.getTracks().forEach(t => t.stop());
+        document.getElementById('camera-overlay').style.display = 'none';
+        document.getElementById('ai-loading').style.display = 'none';
+    }
+
+    async function captureAndAnalyze() {
+        const video = document.getElementById('camera-video');
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        
+        // 1. 取得影像 Base64 (去除檔頭)
+        const base64Image = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+        
+        // 2. 顯示 Loading UI
+        document.getElementById('ai-loading').style.display = 'block';
+        
+        // 3. 呼叫 Google Gemini API
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [
+                            { inline_data: { mime_type: "image/jpeg", data: base64Image } },
+                            { text: "你是一位資深導遊，正帶團遊覽南美洲與南極。請仔細觀察這張照片，辨識出畫面中的地標、建築、動物、植物或自然景觀。先用一句話說出你辨識到的是什麼，再撰寫一段約 100-150 字的生動導覽解說，就像在現場講給遊客聽一樣。請用繁體中文回答，不要加標題或分段符號。" }
+                        ]
+                    }]
+                })
+            });
+
+            if(!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                const errMsg = errData?.error?.message || `HTTP ${response.status}`;
+                throw new Error(errMsg);
+            }
+
+            const data = await response.json();
+
+            if(data.candidates && data.candidates[0].content) {
+                const aiText = data.candidates[0].content.parts[0].text;
+
+                // 4. 關閉相機並播放
+                closeCamera();
+                speak(aiText);
+                alert("🤖 AI 導遊觀察到：\n\n" + aiText);
+            } else if(data.candidates && data.candidates[0].finishReason === 'SAFETY') {
+                throw new Error("圖片被安全過濾器攔截，請換一張照片試試");
+            } else {
+                console.error("API 回應:", JSON.stringify(data));
+                throw new Error(data?.error?.message || "AI 回應格式錯誤或 API 配額不足");
+            }
+        } catch (error) {
+            document.getElementById('ai-loading').style.display = 'none';
+            alert("辨識失敗: " + error.message);
+            closeCamera();
+        }
+    }
+
+    // 啟動主畫面
+    render();
+
+</script>
+</body>
+</html>
