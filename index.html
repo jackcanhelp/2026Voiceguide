@@ -335,11 +335,8 @@
     // 0. 全域設定 (API Key & Model)
     // ==========================================
     
-    // 您的 API Key (已設定 Git 網域限制，直接寫入安全)
-    const API_KEY = "AIzaSyDZaWppTS_fPhdyju3bwgS-magwaQyKQwY";
-    
-    // 使用的模型名稱
-    const MODEL_NAME = "gemini-2.5-flash-lite";
+    // Cloudflare Worker Proxy（API key 存在 Worker 環境變數中）
+    const WORKER_ENDPOINT = "https://gemini-proxy-voiceguide.a5170159.workers.dev";
 
     // ==========================================
     // 1. 導覽資料 (完整版)
@@ -698,10 +695,8 @@
         document.getElementById('ai-loading').style.display = 'block';
         
         // 3. 呼叫 Google Gemini API
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
-
         try {
-            const response = await fetch(url, {
+            const response = await fetch(WORKER_ENDPOINT, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
