@@ -822,22 +822,35 @@
 
     async function captureAndAnalyze() {
         const video = document.getElementById('camera-video');
+
+        // 1. 縮放影像至最大 1024px（減少上傳量，避免行動網路 Failed to fetch）
+        const MAX_SIZE = 1024;
+        let w = video.videoWidth;
+        let h = video.videoHeight;
+        if (Math.max(w, h) > MAX_SIZE) {
+            const scale = MAX_SIZE / Math.max(w, h);
+            w = Math.round(w * scale);
+            h = Math.round(h * scale);
+        }
         const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        
-        // 1. 取得影像 Base64 (去除檔頭)
-        const base64Image = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
-        
-        // 2. 顯示 Loading UI
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+
+        // 2. 取得影像 Base64 (去除檔頭)
+        const base64Image = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+
+        // 3. 顯示 Loading UI
         document.getElementById('ai-loading').style.display = 'block';
-        
-        // 3. 呼叫 Google Gemini API
+
+        // 4. 呼叫 Google Gemini API（含 30 秒超時）
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000);
         try {
             const response = await fetch(WORKER_ENDPOINT, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                signal: controller.signal,
                 body: JSON.stringify({
                     contents: [{
                         parts: [
@@ -847,6 +860,7 @@
                     }]
                 })
             });
+            clearTimeout(timeout);
 
             if(!response.ok) {
                 const errData = await response.json().catch(() => ({}));
@@ -859,7 +873,7 @@
             if(data.candidates && data.candidates[0].content) {
                 const aiText = data.candidates[0].content.parts[0].text;
 
-                // 4. 關閉相機並播放
+                // 5. 關閉相機並播放
                 closeCamera();
                 speak(aiText);
                 alert("🤖 AI 導遊觀察到：\n\n" + aiText);
@@ -870,8 +884,12 @@
                 throw new Error(data?.error?.message || "AI 回應格式錯誤或 API 配額不足");
             }
         } catch (error) {
+            clearTimeout(timeout);
             document.getElementById('ai-loading').style.display = 'none';
-            alert("辨識失敗: " + error.message);
+            let msg = error.message;
+            if (error.name === 'AbortError') msg = "請求逾時，請確認網路連線後再試";
+            else if (msg === 'Failed to fetch') msg = "無法連線至 AI 伺服器，請確認網路連線（可能圖片過大或訊號不穩）";
+            alert("辨識失敗: " + msg);
             closeCamera();
         }
     }
