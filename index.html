@@ -662,13 +662,25 @@
     const btnBack = document.getElementById('btn-back');
     
     let state = { view: 'home', dayIndex: null, spotIndex: null };
+    let homeScrollPos = 0;
 
     function navigate(view, dIdx = null, sIdx = null) {
+        // 離開首頁時記住滾動位置
+        if (state.view === 'home' && view !== 'home') {
+            homeScrollPos = window.scrollY;
+        }
+
         state.view = view;
         state.dayIndex = dIdx;
         state.spotIndex = sIdx;
         render();
-        window.scrollTo(0, 0);
+
+        // 回到首頁時恢復位置，其他頁面捲到頂部
+        if (view === 'home') {
+            window.scrollTo(0, homeScrollPos);
+        } else {
+            window.scrollTo(0, 0);
+        }
     }
 
     function goBack() {
@@ -823,8 +835,8 @@
     async function captureAndAnalyze() {
         const video = document.getElementById('camera-video');
 
-        // 1. 縮放影像至最大 1024px（減少上傳量，避免行動網路 Failed to fetch）
-        const MAX_SIZE = 1024;
+        // 1. 縮放影像至最大 768px（平衡辨識品質與速度）
+        const MAX_SIZE = 768;
         let w = video.videoWidth;
         let h = video.videoHeight;
         if (Math.max(w, h) > MAX_SIZE) {
@@ -837,8 +849,8 @@
         canvas.height = h;
         canvas.getContext('2d').drawImage(video, 0, 0, w, h);
 
-        // 2. 取得影像 Base64 (去除檔頭)
-        const base64Image = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+        // 2. 取得影像 Base64 (去除檔頭)，降低品質加速上傳
+        const base64Image = canvas.toDataURL('image/jpeg', 0.65).split(',')[1];
 
         // 3. 顯示 Loading UI
         document.getElementById('ai-loading').style.display = 'block';
@@ -855,7 +867,7 @@
                     contents: [{
                         parts: [
                             { inline_data: { mime_type: "image/jpeg", data: base64Image } },
-                            { text: "你是一位資深導遊，正帶團遊覽南美洲與南極。請仔細觀察這張照片，辨識出畫面中的地標、建築、動物、植物或自然景觀。先用一句話說出你辨識到的是什麼，再撰寫一段約 100-150 字的生動導覽解說，就像在現場講給遊客聽一樣。請用繁體中文回答，不要加標題或分段符號。" }
+                            { text: "你是南美南極導遊。辨識照片中的地標/建築/動物/植物/景觀，用一句話點明是什麼，再用80-120字生動解說。繁體中文，不加標題。" }
                         ]
                     }]
                 })
