@@ -254,11 +254,12 @@
             font-size: 2rem;
         }
         #btn-capture:active { background: #ccc; }
-        #btn-close-cam {
+        #btn-close-cam, #btn-photo {
             width: 50px; height: 50px;
             background: rgba(0,0,0,0.6); border: 2px solid white; color: white;
             font-size: 1.2rem;
         }
+        #btn-photo { font-size: 1.5rem; }
 
         #ai-loading {
             display: none;
@@ -327,7 +328,9 @@
     <div class="camera-ui">
         <button id="btn-close-cam" onclick="closeCamera()">✖</button>
         <button id="btn-capture" onclick="captureAndAnalyze()">📸</button>
+        <button id="btn-photo" onclick="document.getElementById('photo-input').click()">🖼️</button>
     </div>
+    <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="analyzePhoto(this)">
 </div>
 
 <script>
@@ -903,6 +906,82 @@
             else if (msg === 'Failed to fetch') msg = "無法連線至 AI 伺服器，請確認網路連線（可能圖片過大或訊號不穩）";
             alert("辨識失敗: " + msg);
             closeCamera();
+        }
+    }
+
+    async function analyzePhoto(input) {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+        input.value = ''; // 重置以便重複選擇同一檔案
+
+        // 顯示 Loading UI
+        document.getElementById('ai-loading').style.display = 'block';
+
+        try {
+            // 1. 讀取並縮放圖片
+            const img = await new Promise((resolve, reject) => {
+                const image = new Image();
+                image.onload = () => resolve(image);
+                image.onerror = reject;
+                image.src = URL.createObjectURL(file);
+            });
+
+            const MAX_SIZE = 768;
+            let w = img.width;
+            let h = img.height;
+            if (Math.max(w, h) > MAX_SIZE) {
+                const scale = MAX_SIZE / Math.max(w, h);
+                w = Math.round(w * scale);
+                h = Math.round(h * scale);
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            const base64Image = canvas.toDataURL('image/jpeg', 0.65).split(',')[1];
+
+            // 2. 呼叫 AI API
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 30000);
+
+            const response = await fetch(WORKER_ENDPOINT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                signal: controller.signal,
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [
+                            { inline_data: { mime_type: "image/jpeg", data: base64Image } },
+                            { text: "你是一位資深導遊，正帶團遊覽南美洲與南極。請仔細觀察這張照片，辨識出畫面中的地標、建築、動物、植物或自然景觀。先用一句話說出你辨識到的是什麼，再撰寫一段約 100-150 字的生動導覽解說，就像在現場講給遊客聽一樣。請用繁體中文回答，不要加標題或分段符號。" }
+                        ]
+                    }]
+                })
+            });
+            clearTimeout(timeout);
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData?.error?.message || `HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.candidates && data.candidates[0].content) {
+                const aiText = data.candidates[0].content.parts[0].text;
+                closeCamera();
+                speak(aiText);
+                alert("🤖 AI 導遊觀察到：\n\n" + aiText);
+            } else if (data.candidates && data.candidates[0].finishReason === 'SAFETY') {
+                throw new Error("圖片被安全過濾器攔截，請換一張照片試試");
+            } else {
+                throw new Error(data?.error?.message || "AI 回應格式錯誤或 API 配額不足");
+            }
+        } catch (error) {
+            document.getElementById('ai-loading').style.display = 'none';
+            let msg = error.message;
+            if (error.name === 'AbortError') msg = "請求逾時，請確認網路連線後再試";
+            else if (msg === 'Failed to fetch') msg = "無法連線至 AI 伺服器，請確認網路連線";
+            alert("辨識失敗: " + msg);
         }
     }
 
